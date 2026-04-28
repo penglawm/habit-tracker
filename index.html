@@ -1,0 +1,620 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/><title>365Habit — Build the life you want</title><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/><style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Syne',sans-serif;background:#080808;color:#fff;min-height:100vh}
+body.light{background:#f4f4f0;color:#0a0a0a}
+button{cursor:pointer;font-family:'Syne',sans-serif}
+input,select{outline:none;font-family:'Syne',sans-serif}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUpToast{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fade-up{animation:fadeUp 0.6s ease forwards}
+.delay-1{animation-delay:0.1s;opacity:0}
+.delay-2{animation-delay:0.2s;opacity:0}
+.delay-3{animation-delay:0.3s;opacity:0}
+.delay-4{animation-delay:0.4s;opacity:0}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+</style></head><body><div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useEffect,useCallback,useRef}=React;
+const SUPA_URL='https://ilpjbxavzbasaanoaiff.supabase.co';
+const SUPA_KEY='sb_publishable_bP6Gk6jV0uznYf-zKlyM6Q_gh3vzz6i';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+const START=new Date(2026,3,28);
+
+const QUOTES=[
+  {text:"We suffer more in imagination than in reality.",author:"Seneca"},
+  {text:"Stay hard.",author:"David Goggins"},
+  {text:"Do the difficult things while they are easy.",author:"Lao Tzu"},
+  {text:"You have power over your mind, not outside events.",author:"Marcus Aurelius"},
+  {text:"Discipline equals freedom.",author:"Jocko Willink"},
+  {text:"The impediment to action advances action. What stands in the way becomes the way.",author:"Marcus Aurelius"},
+  {text:"Don't stop when you're tired. Stop when you're done.",author:"Unknown"},
+  {text:"Be where your feet are.",author:"Unknown"},
+  {text:"Small daily improvements lead to stunning results.",author:"Robin Sharma"},
+  {text:"Suffer the pain of discipline or suffer the pain of regret.",author:"Jim Rohn"},
+  {text:"The mind is everything. What you think you become.",author:"Buddha"},
+  {text:"No man is free who is not master of himself.",author:"Epictetus"},
+  {text:"One day or day one. You decide.",author:"Unknown"},
+  {text:"Greatness is a lot of small things done well every day.",author:"Unknown"},
+  {text:"The secret of your future is hidden in your daily routine.",author:"Mike Murdock"},
+  {text:"Calm mind brings inner strength and self-confidence.",author:"Dalai Lama"},
+  {text:"Who you are tomorrow begins with what you do today.",author:"Tim Fargo"},
+  {text:"Callous your mind.",author:"David Goggins"},
+  {text:"Every action you take is a vote for the person you want to become.",author:"James Clear"},
+  {text:"Hard choices, easy life. Easy choices, hard life.",author:"Jerzy Gregorek"},
+  {text:"Progress not perfection.",author:"Unknown"},
+  {text:"The cave you fear to enter holds the treasure you seek.",author:"Joseph Campbell"},
+  {text:"You can't cheat the grind.",author:"Unknown"},
+  {text:"Breathe. You are exactly where you need to be.",author:"Unknown"},
+  {text:"Waste no more time arguing. Get to work.",author:"Marcus Aurelius"},
+];
+
+const DEF=[{id:'h1',name:'10k Steps',emoji:'🚶',color:'#4ade80'},{id:'h2',name:'Drink 2L',emoji:'💧',color:'#38bdf8'},{id:'h3',name:'Read 20 min',emoji:'📚',color:'#a78bfa'},{id:'h4',name:'Meditate',emoji:'🧘',color:'#fb923c'},{id:'h5',name:'Eat Clean',emoji:'🥗',color:'#f472b6'}];
+const EMOJIS=['🚶','💧','📚','🧘','🥗','🚀','💪','🎯','✍️','🧠','🏃','🎸','🌿','☀️','🍎','💤','🧹','🏋️','🎨','🧘'];
+const HCOLORS=['#4ade80','#38bdf8','#a78bfa','#fb923c','#f472b6','#fbbf24','#34d399','#f87171'];
+const ACCENTS=['#4ade80','#38bdf8','#a78bfa','#fb923c','#f472b6','#fbbf24','#f87171','#e879f9'];
+const DURATIONS=[{label:'30 Day Challenge',days:30},{label:'90 Day Challenge',days:90},{label:'180 Days',days:180},{label:'365 Days — Full Year',days:365}];
+
+const dayIdx=d=>{const s=new Date(START);s.setHours(0,0,0,0);const t=new Date(d);t.setHours(0,0,0,0);return Math.floor((t-s)/86400000);};
+const todayIdx=()=>dayIdx(new Date());
+const idxToDate=i=>{const d=new Date(START);d.setDate(d.getDate()+i);return d;};
+const fmt=d=>d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+const fmtShort=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+function streak(logs,hid){let s=0,t=todayIdx();for(let i=t;i>=0;i--){if(logs[i+'_'+hid])s++;else break;}return s;}
+function total(logs,hid){return Object.keys(logs).filter(k=>k.endsWith('_'+hid)&&logs[k]).length;}
+function rate(logs,hid){return total(logs,hid)/Math.max(1,todayIdx()+1);}
+function getTodayQuote(){const d=Math.floor((new Date()-new Date(2026,0,1))/86400000);return QUOTES[d%QUOTES.length];}
+
+function useTheme(){
+  const[dark,setDark]=useState(()=>localStorage.getItem('ht_theme')!=='light');
+  const[accent,setAccent]=useState(()=>localStorage.getItem('ht_accent')||'#4ade80');
+  function toggleTheme(v){const next=v==='dark';localStorage.setItem('ht_theme',next?'dark':'light');document.body.className=next?'':'light';setDark(next);}
+  function applyAccent(c){setAccent(c);localStorage.setItem('ht_accent',c);}
+  useEffect(()=>{document.body.className=dark?'':'light';},[dark]);
+  return{dark,toggleTheme,accent,applyAccent};
+}
+
+// ── FillBar ──────────────────────────────────────────────────────────────────
+function FillBar({pct,color,emoji,size=52}){
+  const fill=Math.min(pct,1);
+  return <div style={{width:size,height:size,borderRadius:14,background:'rgba(128,128,128,0.1)',position:'relative',overflow:'hidden',flexShrink:0}}>
+    <div style={{position:'absolute',bottom:0,left:0,right:0,height:(fill*100)+'%',background:color+'40',transition:'height 0.6s cubic-bezier(0.4,0,0.2,1)'}}/>
+    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{emoji}</div>
+    <div style={{position:'absolute',bottom:2,left:0,right:0,textAlign:'center',fontFamily:"'DM Mono',monospace",fontSize:7,color:color,fontWeight:500}}>{Math.round(fill*100)}%</div>
+  </div>;
+}
+
+// ── Card ─────────────────────────────────────────────────────────────────────
+function Card({h,logs,onToggle,dayOff=0,dark,accent}){
+  const idx=Math.max(0,todayIdx()-dayOff),done=!!logs[idx+'_'+h.id];
+  const s=streak(logs,h.id),t2=total(logs,h.id),r2=rate(logs,h.id);
+  const dots=[];
+  for(let i=13;i>=0;i--){const di=idx-i;dots.push(di<0?null:!!logs[di+'_'+h.id]);}
+  const bg=dark?(done?'linear-gradient(135deg,'+h.color+'18,'+h.color+'06)':'rgba(255,255,255,0.025)'):(done?h.color+'10':'rgba(0,0,0,0.03)');
+  const bdr=dark?(done?h.color+'50':'rgba(255,255,255,0.07)'):(done?h.color+'60':'rgba(0,0,0,0.07)');
+  const tc=dark?(done?'#fff':'rgba(255,255,255,0.8)'):(done?'#000':'rgba(0,0,0,0.7)');
+  const mc=dark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)';
+  return <div onClick={()=>onToggle(h.id,dayOff)} style={{background:bg,border:'1px solid '+bdr,borderRadius:18,padding:'16px 18px',cursor:'pointer',userSelect:'none',transition:'all 0.3s ease',position:'relative',overflow:'hidden',marginBottom:9}}>
+    {done&&<div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,'+h.color+',transparent)'}}/>}
+    <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
+      <FillBar pct={r2} color={h.color} emoji={h.emoji} size={52}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:700,fontSize:15,color:tc,marginBottom:3,letterSpacing:'-0.02em'}}>{h.name}</div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {s>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'#fb923c'}}>🔥 {s}d</span>}
+          <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:mc}}>{t2} logged</span>
+        </div>
+      </div>
+      <div style={{width:38,height:38,borderRadius:'50%',background:done?h.color:'transparent',border:'2px solid '+(done?h.color:dark?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.12)'),display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:done?'#000':dark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.25)',transition:'all 0.25s ease',fontWeight:700}}>{done?'✓':'○'}</div>
+    </div>
+    <div style={{display:'flex',gap:3,alignItems:'center'}}>
+      {dots.map((d,i)=><div key={i} style={{width:d===null?4:6,height:d===null?4:6,borderRadius:'50%',background:d===null?'transparent':d?h.color:dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)',transition:'background 0.3s'}}/>)}
+      <span style={{marginLeft:4,fontFamily:"'DM Mono',monospace",fontSize:8,color:dark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.2)'}}>14d</span>
+    </div>
+  </div>;
+}
+
+// ── Weekly Accordion ─────────────────────────────────────────────────────────
+function WeekAccordion({logs,habits,dark}){
+  const ti=todayIdx();
+  const[open,setOpen]=useState(0);
+  const weeks=[];
+  let wn=0;
+  for(let ws=0;ws<=ti;ws+=7){
+    const we=Math.min(ws+6,ti);
+    const days=[];
+    for(let d=ws;d<=we;d++)days.push(d);
+    const tot=days.reduce((s,d)=>s+habits.filter(h=>logs[d+'_'+h.id]).length,0);
+    const mx=days.length*habits.length;
+    weeks.push({label:'Week '+(wn+1)+' · '+fmtShort(idxToDate(ws))+' – '+fmtShort(idxToDate(we)),days,tot,mx,pct:mx>0?tot/mx:0});
+    wn++;
+  }
+  weeks.reverse();
+  const bg=dark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.03)';
+  const bdr=dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)';
+  const muted=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
+  return <div style={{display:'flex',flexDirection:'column',gap:8}}>
+    {weeks.map((w,wi)=>{
+      const isOpen=open===wi;
+      return <div key={wi} style={{background:bg,border:'1px solid '+bdr,borderRadius:16,overflow:'hidden'}}>
+        <div onClick={()=>setOpen(isOpen?-1:wi)} style={{padding:'14px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{w.label}</div>
+            <div style={{height:4,background:dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.07)',borderRadius:2,overflow:'hidden'}}>
+              <div style={{height:'100%',width:(w.pct*100)+'%',background:w.pct>=0.8?'#4ade80':w.pct>=0.5?'#fb923c':'#38bdf8',borderRadius:2,transition:'width 0.5s ease'}}/>
+            </div>
+          </div>
+          <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:muted}}>{Math.round(w.pct*100)}%</span>
+          <span style={{fontSize:11,color:muted,display:'inline-block',transition:'transform 0.2s',transform:isOpen?'rotate(180deg)':'rotate(0)'}}>▼</span>
+        </div>
+        {isOpen&&<div style={{padding:'4px 16px 16px',animation:'slideDown 0.2s ease'}}>
+          <div style={{display:'flex',gap:4,alignItems:'flex-end',height:56,marginBottom:14}}>
+            {w.days.map(d=>{
+              const cnt=habits.filter(h=>logs[d+'_'+h.id]).length;
+              const p=habits.length>0?cnt/habits.length:0;
+              return <div key={d} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                <div style={{width:'100%',borderRadius:4,height:Math.max(3,Math.round(p*44)),background:p>=0.8?'#4ade80':p>=0.5?'#fb923c':dark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)',border:d===ti?'1px solid #4ade80':'none',transition:'height 0.3s ease'}}/>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:7,color:muted}}>{idxToDate(d).toLocaleDateString('en-GB',{weekday:'short'}).slice(0,2)}</span>
+              </div>;
+            })}
+          </div>
+          {habits.map(h=>{
+            const wd=w.days.filter(d=>logs[d+'_'+h.id]).length;
+            return <div key={h.id} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+              <span style={{fontSize:13}}>{h.emoji}</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,minWidth:70,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.name}</span>
+              <div style={{flex:1,height:4,background:dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.07)',borderRadius:2,overflow:'hidden'}}>
+                <div style={{height:'100%',width:(wd/w.days.length*100)+'%',background:h.color,borderRadius:2,transition:'width 0.5s ease'}}/>
+              </div>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,minWidth:24,textAlign:'right'}}>{wd}/{w.days.length}</span>
+            </div>;
+          })}
+        </div>}
+      </div>;
+    })}
+  </div>;
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function Settings({user,dark,toggleTheme,accent,applyAccent,journeyDays,setJourneyDays,onClose}){
+  const[displayName,setDisplayName]=useState(()=>localStorage.getItem('ht_name')||'');
+  const[newPass,setNewPass]=useState('');
+  const[msg,setMsg]=useState({text:'',ok:true});
+  const[pendingAccent,setPendingAccent]=useState(accent);
+  const[pendingJourney,setPendingJourney]=useState(journeyDays);
+  const[customDays,setCustomDays]=useState('');
+
+  const bg=dark?'#0a0a0a':'#f4f4f0';
+  const card=dark?'#161616':'#fff';
+  const bdr=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)';
+  const muted=dark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)';
+  const txt=dark?'#fff':'#000';
+  const inputBg=dark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)';
+
+  function showMsg(text,ok=true){setMsg({text,ok});setTimeout(()=>setMsg({text:'',ok:true}),3000);}
+
+  function saveName(){
+    if(!displayName.trim()){showMsg('Please enter a name',false);return;}
+    localStorage.setItem('ht_name',displayName.trim());
+    showMsg('✓ Name saved!');
+  }
+
+  async function savePass(){
+    if(newPass.length<6){showMsg('Min 6 characters',false);return;}
+    const{error}=await sb.auth.updateUser({password:newPass});
+    if(error)showMsg(error.message,false);
+    else{showMsg('✓ Password updated!');setNewPass('');}
+  }
+
+  function saveAppearance(){
+    applyAccent(pendingAccent);
+    setJourneyDays(pendingJourney);
+    localStorage.setItem('ht_journey',pendingJourney);
+    showMsg('✓ Appearance saved!');
+  }
+
+  const Section=({title,children,color})=><div style={{background:card,border:'1px solid '+bdr,borderRadius:20,padding:'24px',marginBottom:14,position:'relative',overflow:'hidden'}}>
+    {color&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+color+','+color+'00)'}}/>}
+    <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:18}}>{title}</div>
+    {children}
+  </div>;
+
+  return <div style={{minHeight:'100vh',background:bg,color:txt,transition:'background 0.3s'}}>
+    <div style={{maxWidth:520,margin:'0 auto',padding:'0 0 80px'}}>
+
+      {/* Header */}
+      <div style={{padding:'52px 24px 32px',display:'flex',alignItems:'center',gap:16,borderBottom:'1px solid '+bdr}}>
+        <button onClick={onClose} style={{width:42,height:42,borderRadius:13,border:'1px solid '+bdr,background:card,color:txt,fontSize:20,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>←</button>
+        <div>
+          <div style={{fontWeight:800,fontSize:28,letterSpacing:'-0.03em'}}>Settings</div>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:muted,marginTop:3}}>{user?.email}</div>
+        </div>
+      </div>
+
+      <div style={{padding:'24px'}}>
+
+        {/* Profile */}
+        <Section title="Profile" color={accent}>
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20}}>
+            <div style={{width:64,height:64,borderRadius:20,background:'linear-gradient(135deg,'+accent+'40,'+accent+'15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>
+              {displayName?displayName[0].toUpperCase():'👤'}
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:3}}>{displayName||'Set your name'}</div>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:muted}}>Display name visible on home screen</div>
+            </div>
+          </div>
+          <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Your display name..." style={{width:'100%',background:inputBg,border:'1px solid '+bdr,borderRadius:12,padding:'14px 16px',color:txt,fontSize:15,marginBottom:12}}/>
+          <button onClick={saveName} style={{width:'100%',padding:14,borderRadius:12,border:'none',background:accent,color:'#000',fontWeight:700,fontSize:15}}>Save Name</button>
+        </Section>
+
+        {/* Appearance */}
+        <Section title="Appearance" color="#38bdf8">
+          {/* Theme toggle */}
+          <div style={{marginBottom:22}}>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:txt}}>Theme</div>
+            <div style={{display:'flex',gap:3,background:dark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',borderRadius:13,padding:4}}>
+              {[['dark','🌙  Dark'],['light','☀️  Light']].map(([v,l])=>{
+                const sel=(v==='dark')===dark;
+                return <button key={v} onClick={()=>toggleTheme(v)} style={{flex:1,padding:'12px 0',borderRadius:10,border:'none',background:sel?dark?'rgba(255,255,255,0.1)':'#fff':'transparent',color:sel?txt:muted,fontWeight:sel?700:500,fontSize:14,transition:'all 0.2s',boxShadow:sel?'0 1px 3px rgba(0,0,0,0.1)':'none'}}>{l}</button>;
+              })}
+            </div>
+          </div>
+
+          {/* Accent color */}
+          <div style={{marginBottom:22}}>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:txt}}>Accent Color</div>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:8}}>
+              {ACCENTS.map(c=><button key={c} onClick={()=>setPendingAccent(c)} style={{width:40,height:40,borderRadius:12,background:c,border:'3px solid '+(pendingAccent===c?txt:'transparent'),transition:'all 0.15s',transform:pendingAccent===c?'scale(1.1)':'scale(1)',boxShadow:pendingAccent===c?'0 0 0 2px '+c+'50':'none'}}/>)}
+            </div>
+            <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:muted}}>Preview: <span style={{color:pendingAccent,fontWeight:500}}>●</span> {pendingAccent}</div>
+          </div>
+
+          {/* Journey length */}
+          <div style={{marginBottom:22}}>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:txt}}>Journey Length</div>
+            <select value={pendingJourney} onChange={e=>setPendingJourney(parseInt(e.target.value))} style={{width:'100%',background:inputBg,border:'1px solid '+bdr,borderRadius:12,padding:'14px 16px',color:txt,fontSize:14,marginBottom:10,appearance:'none',WebkitAppearance:'none',cursor:'pointer'}}>
+              {DURATIONS.map(d=><option key={d.days} value={d.days}>{d.label}</option>)}
+              {!DURATIONS.find(d=>d.days===pendingJourney)&&<option value={pendingJourney}>Custom — {pendingJourney} days</option>}
+            </select>
+            <div style={{display:'flex',gap:8}}>
+              <input value={customDays} onChange={e=>setCustomDays(e.target.value)} placeholder="Or enter custom days..." type="number" min="1" max="3650" style={{flex:1,background:inputBg,border:'1px solid '+bdr,borderRadius:12,padding:'12px 16px',color:txt,fontSize:14}}/>
+              <button onClick={()=>{const d=parseInt(customDays);if(d>0&&d<=3650){setPendingJourney(d);setCustomDays('');}}} style={{padding:'12px 18px',borderRadius:12,border:'none',background:dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',color:txt,fontWeight:600,fontSize:13}}>Set</button>
+            </div>
+          </div>
+
+          <button onClick={saveAppearance} style={{width:'100%',padding:14,borderRadius:12,border:'none',background:'#38bdf8',color:'#000',fontWeight:700,fontSize:15}}>Save Appearance</button>
+        </Section>
+
+        {/* Security */}
+        <Section title="Security" color="#f87171">
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:txt}}>Change Password</div>
+          <input value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="New password (min 6 characters)..." type="password" style={{width:'100%',background:inputBg,border:'1px solid '+bdr,borderRadius:12,padding:'14px 16px',color:txt,fontSize:14,marginBottom:12}}/>
+          <button onClick={savePass} style={{width:'100%',padding:14,borderRadius:12,border:'none',background:'#f87171',color:'#000',fontWeight:700,fontSize:15}}>Update Password</button>
+        </Section>
+
+        {/* Feedback message */}
+        {msg.text&&<div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:msg.ok?accent:'#f87171',textAlign:'center',padding:'10px',marginBottom:8,animation:'fadeIn 0.3s ease'}}>{msg.text}</div>}
+
+        {/* Sign out */}
+        <button onClick={()=>sb.auth.signOut()} style={{width:'100%',padding:15,borderRadius:16,border:'1px solid rgba(239,68,68,0.2)',background:'rgba(239,68,68,0.06)',color:'#f87171',fontWeight:600,fontSize:15,marginTop:4}}>Sign Out</button>
+      </div>
+    </div>
+  </div>;
+}
+
+// ── Landing Page ──────────────────────────────────────────────────────────────
+function Landing({onGetStarted}){
+  const features=[
+    {icon:'🎯',title:'Track Any Habit',desc:'Build your stack from scratch. Steps, water, reading, gym — anything that matters to you.'},
+    {icon:'🔥',title:'Streak System',desc:'Visual streaks keep you accountable. Miss a day and feel it. Build a week and feel unstoppable.'},
+    {icon:'📊',title:'Weekly Insights',desc:'See your progress week over week. Bar charts, completion rates, and habit breakdowns.'},
+    {icon:'💬',title:'Daily Motivation',desc:'A fresh quote every morning from Stoics, athletes, and philosophers. Curated to push you.'},
+    {icon:'🌙',title:'Dark & Light Mode',desc:'Looks beautiful either way. Pick your accent color. Make it yours.'},
+    {icon:'📱',title:'Works Everywhere',desc:'Open on your phone, laptop, tablet — your data syncs instantly across every device.'},
+  ];
+
+  const steps=[
+    {num:'01',title:'Sign up free',desc:'No credit card. No catch. Just your email and a password.'},
+    {num:'02',title:'Set your habits',desc:'Choose from defaults or create your own. Pick a journey length — 30, 90, or 365 days.'},
+    {num:'03',title:'Check in daily',desc:'Tap to log. Watch your rings fill. Build the streak. Transform your life.'},
+  ];
+
+  return <div style={{background:'#080808',color:'#fff',minHeight:'100vh',overflowX:'hidden'}}>
+
+    {/* Nav */}
+    <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,padding:'20px 32px',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(8,8,8,0.85)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+      <div style={{fontWeight:800,fontSize:22,letterSpacing:'-0.03em'}}>365<span style={{color:'#4ade80'}}>Habit</span></div>
+      <button onClick={onGetStarted} style={{padding:'10px 22px',borderRadius:10,border:'none',background:'#4ade80',color:'#000',fontWeight:700,fontSize:14}}>Get Started</button>
+    </nav>
+
+    {/* Hero */}
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'120px 24px 80px',textAlign:'center',position:'relative'}}>
+      {/* Glow */}
+      <div style={{position:'absolute',top:'30%',left:'50%',transform:'translate(-50%,-50%)',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(74,222,128,0.08) 0%,transparent 70%)',pointerEvents:'none'}}/>
+
+      <div className="fade-up" style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:'#4ade80',letterSpacing:'0.15em',textTransform:'uppercase',marginBottom:24,border:'1px solid rgba(74,222,128,0.2)',padding:'6px 16px',borderRadius:20,display:'inline-block'}}>Start your journey today</div>
+
+      <h1 className="fade-up delay-1" style={{fontWeight:800,fontSize:'clamp(44px,8vw,80px)',letterSpacing:'-0.04em',lineHeight:1.05,marginBottom:24,maxWidth:700}}>
+        Build habits that<br/><span style={{color:'#4ade80'}}>change your life.</span>
+      </h1>
+
+      <p className="fade-up delay-2" style={{fontSize:'clamp(16px,2vw,20px)',color:'rgba(255,255,255,0.5)',maxWidth:480,lineHeight:1.6,marginBottom:40}}>
+        Track your daily habits, build unstoppable streaks, and become the person you want to be — one day at a time.
+      </p>
+
+      <div className="fade-up delay-3" style={{display:'flex',gap:12,flexWrap:'wrap',justifyContent:'center'}}>
+        <button onClick={onGetStarted} style={{padding:'16px 36px',borderRadius:14,border:'none',background:'#4ade80',color:'#000',fontWeight:700,fontSize:16,transition:'transform 0.2s'}}
+          onMouseEnter={e=>e.target.style.transform='scale(1.03)'}
+          onMouseLeave={e=>e.target.style.transform='scale(1)'}>
+          Start for free →
+        </button>
+        <button onClick={()=>document.getElementById('features').scrollIntoView({behavior:'smooth'})} style={{padding:'16px 36px',borderRadius:14,border:'1px solid rgba(255,255,255,0.12)',background:'transparent',color:'#fff',fontWeight:600,fontSize:16}}>
+          See features
+        </button>
+      </div>
+
+      <div className="fade-up delay-4" style={{marginTop:64,fontFamily:"'DM Mono',monospace",fontSize:11,color:'rgba(255,255,255,0.25)'}}>
+        Free forever · No credit card · Works on any device
+      </div>
+    </div>
+
+    {/* Features */}
+    <div id="features" style={{padding:'80px 24px',maxWidth:1000,margin:'0 auto'}}>
+      <div style={{textAlign:'center',marginBottom:56}}>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'#4ade80',letterSpacing:'0.15em',textTransform:'uppercase',marginBottom:14}}>Everything you need</div>
+        <div style={{fontWeight:800,fontSize:'clamp(28px,4vw,44px)',letterSpacing:'-0.03em'}}>Built for people who<br/>take their habits seriously.</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}}>
+        {features.map((f,i)=><div key={i} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:20,padding:'28px',transition:'border-color 0.2s,transform 0.2s'}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(74,222,128,0.3)';e.currentTarget.style.transform='translateY(-2px)';}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.transform='translateY(0)';}}>
+          <div style={{fontSize:32,marginBottom:16}}>{f.icon}</div>
+          <div style={{fontWeight:700,fontSize:17,marginBottom:8,letterSpacing:'-0.02em'}}>{f.title}</div>
+          <div style={{fontSize:14,color:'rgba(255,255,255,0.45)',lineHeight:1.6}}>{f.desc}</div>
+        </div>)}
+      </div>
+    </div>
+
+    {/* How it works */}
+    <div style={{padding:'80px 24px',maxWidth:700,margin:'0 auto'}}>
+      <div style={{textAlign:'center',marginBottom:56}}>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'#38bdf8',letterSpacing:'0.15em',textTransform:'uppercase',marginBottom:14}}>Simple by design</div>
+        <div style={{fontWeight:800,fontSize:'clamp(28px,4vw,44px)',letterSpacing:'-0.03em'}}>Three steps to<br/>a better you.</div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:3}}>
+        {steps.map((s,i)=><div key={i} style={{display:'flex',gap:24,padding:'28px',background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:20,alignItems:'flex-start'}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontWeight:500,fontSize:28,color:'rgba(255,255,255,0.15)',flexShrink:0,lineHeight:1,marginTop:3}}>{s.num}</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:18,marginBottom:6,letterSpacing:'-0.02em'}}>{s.title}</div>
+            <div style={{fontSize:14,color:'rgba(255,255,255,0.45)',lineHeight:1.6}}>{s.desc}</div>
+          </div>
+        </div>)}
+      </div>
+    </div>
+
+    {/* CTA */}
+    <div style={{padding:'80px 24px 100px',textAlign:'center',position:'relative'}}>
+      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(74,222,128,0.06) 0%,transparent 70%)',pointerEvents:'none'}}/>
+      <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'#4ade80',letterSpacing:'0.15em',textTransform:'uppercase',marginBottom:16}}>Ready to start?</div>
+      <div style={{fontWeight:800,fontSize:'clamp(32px,5vw,56px)',letterSpacing:'-0.03em',marginBottom:16,lineHeight:1.1}}>Your day one<br/>starts today.</div>
+      <div style={{fontSize:16,color:'rgba(255,255,255,0.4)',marginBottom:36}}>Join thousands building better habits, one day at a time.</div>
+      <button onClick={onGetStarted} style={{padding:'18px 48px',borderRadius:14,border:'none',background:'#4ade80',color:'#000',fontWeight:700,fontSize:17,transition:'transform 0.2s'}}
+        onMouseEnter={e=>e.target.style.transform='scale(1.03)'}
+        onMouseLeave={e=>e.target.style.transform='scale(1)'}>
+        Start for free →
+      </button>
+    </div>
+
+    {/* Footer */}
+    <div style={{borderTop:'1px solid rgba(255,255,255,0.05)',padding:'24px',textAlign:'center'}}>
+      <div style={{fontWeight:800,fontSize:18,marginBottom:6}}>365<span style={{color:'#4ade80'}}>Habit</span></div>
+      <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'rgba(255,255,255,0.25)'}}>Build the life you want.</div>
+    </div>
+  </div>;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function AuthScreen({onBack}){
+  const[mode,setMode]=useState('signup');
+  const[email,setEmail]=useState('');
+  const[pass,setPass]=useState('');
+  const[err,setErr]=useState('');
+  const[loading,setLoading]=useState(false);
+  async function submit(){
+    setLoading(true);setErr('');
+    try{
+      if(mode==='login'){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error)throw error;}
+      else{const{error}=await sb.auth.signUp({email,password:pass});if(error)throw error;setErr('Check your email to confirm your account!');}
+    }catch(e){setErr(e.message);}
+    setLoading(false);
+  }
+  return <div style={{minHeight:'100vh',background:'#080808',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative'}}>
+    <button onClick={onBack} style={{position:'absolute',top:24,left:24,fontFamily:"'DM Mono',monospace",fontSize:12,color:'rgba(255,255,255,0.4)',background:'none',border:'none'}}>← Back</button>
+    <div style={{width:'100%',maxWidth:360}}>
+      <div style={{textAlign:'center',marginBottom:36}}>
+        <div style={{fontWeight:800,fontSize:26,letterSpacing:'-0.03em',marginBottom:4}}>365<span style={{color:'#4ade80'}}>Habit</span></div>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'rgba(255,255,255,0.35)'}}>Build the life you want</div>
+      </div>
+      <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:12,padding:4,marginBottom:20}}>
+        {[['signup','Sign Up'],['login','Sign In']].map(([v,l])=><button key={v} onClick={()=>setMode(v)} style={{flex:1,padding:'10px 0',borderRadius:9,border:'none',background:mode===v?'rgba(255,255,255,0.1)':'transparent',color:mode===v?'#fff':'rgba(255,255,255,0.38)',fontWeight:600,fontSize:13}}>{l}</button>)}
+      </div>
+      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email address" type="email" style={{width:'100%',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:11,padding:'14px 16px',color:'#fff',fontSize:15,marginBottom:9}}/>
+      <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Password" type="password" onKeyDown={e=>e.key==='Enter'&&submit()} style={{width:'100%',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:11,padding:'14px 16px',color:'#fff',fontSize:15,marginBottom:14}}/>
+      {err&&<div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:err.includes('Check')?'#4ade80':'#f87171',marginBottom:12,textAlign:'center'}}>{err}</div>}
+      <button onClick={submit} disabled={loading} style={{width:'100%',padding:15,borderRadius:11,border:'none',background:'#4ade80',color:'#000',fontWeight:700,fontSize:15}}>{loading?'...':(mode==='signup'?'Create Account':'Sign In')}</button>
+    </div>
+  </div>;
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App(){
+  const{dark,toggleTheme,accent,applyAccent}=useTheme();
+  const[user,setUser]=useState(null);
+  const[habits,setHabits]=useState([]);
+  const[logs,setLogs]=useState({});
+  const[screen,setScreen]=useState('landing'); // landing | auth | app
+  const[view,setView]=useState('today');
+  const[showAdd,setShowAdd]=useState(false);
+  const[showSettings,setShowSettings]=useState(false);
+  const[toast,setToast]=useState(null);
+  const[nm,setNm]=useState('');
+  const[em,setEm]=useState('🚀');
+  const[cl,setCl]=useState('#4ade80');
+  const[loading,setLoading]=useState(true);
+  const[journeyDays,setJourneyDays]=useState(()=>parseInt(localStorage.getItem('ht_journey')||'248'));
+  const[displayName,setDisplayName]=useState(()=>localStorage.getItem('ht_name')||'');
+
+  useEffect(()=>{
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session?.user){setUser(session.user);setScreen('app');}
+      setLoading(false);
+    });
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user??null);
+      if(session?.user)setScreen('app');
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  useEffect(()=>{if(user)loadData();},[user]);
+  useEffect(()=>{if(!showSettings)setDisplayName(localStorage.getItem('ht_name')||'');},[showSettings]);
+
+  async function loadData(){
+    const uid=user.id;
+    const{data:hData}=await sb.from('habits').select('*').eq('user_id',uid);
+    if(hData&&hData.length>0)setHabits(hData);
+    else{const d=DEF.map(h=>({...h,user_id:uid}));await sb.from('habits').insert(d);setHabits(d);}
+    const{data:lData}=await sb.from('logs').select('*').eq('user_id',uid);
+    if(lData){const m={};lData.forEach(l=>{m[l.day_index+'_'+l.habit_id]=true;});setLogs(m);}
+  }
+
+  function showToast(msg){setToast(msg);clearTimeout(window._tt);window._tt=setTimeout(()=>setToast(null),2400);}
+
+  async function toggle(hid,off=0){
+    const idx=Math.max(0,todayIdx()-off),key=idx+'_'+hid,was=!!logs[key];
+    setLogs(p=>({...p,[key]:!was}));
+    if(!was){await sb.from('logs').insert({habit_id:hid,user_id:user.id,day_index:idx});const h=habits.find(x=>x.id===hid),s=streak({...logs,[key]:true},hid);showToast(s>=7?h.emoji+' 🔥 '+s+' day streak!':s>=3?h.emoji+' '+s+' days!':h.emoji+' Logged!');}
+    else await sb.from('logs').delete().eq('habit_id',hid).eq('user_id',user.id).eq('day_index',idx);
+  }
+
+  async function addH(){
+    if(!nm.trim())return;
+    const h={id:'h'+Date.now(),name:nm.trim(),emoji:em,color:cl,user_id:user.id};
+    await sb.from('habits').insert(h);
+    setHabits(p=>[...p,h]);setShowAdd(false);setNm('');showToast(em+' added!');
+  }
+
+  async function delH(id){
+    await sb.from('habits').delete().eq('id',id).eq('user_id',user.id);
+    await sb.from('logs').delete().eq('habit_id',id).eq('user_id',user.id);
+    setHabits(p=>p.filter(h=>h.id!==id));
+    setLogs(p=>{const n={...p};Object.keys(n).filter(k=>k.endsWith('_'+id)).forEach(k=>delete n[k]);return n;});
+  }
+
+  const ti=todayIdx(),today=new Date();
+  const elapsed=Math.max(1,ti+1);
+  const done=habits.filter(h=>logs[ti+'_'+h.id]).length;
+  const pct=habits.length?done/habits.length:0;
+  const quote=getTodayQuote();
+  const greet=displayName?'Hey, '+displayName+'.':['Keep going.','Stay consistent.',"You've got this.",'One day at a time.','Build the streak.','Show up today.','Make it happen.'][today.getDay()];
+
+  const bg=dark?'#0a0a0a':'#f4f4f0';
+  const cardBg=dark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.04)';
+  const bdr=dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)';
+  const muted=dark?'rgba(255,255,255,0.38)':'rgba(0,0,0,0.38)';
+  const txt=dark?'#fff':'#000';
+
+  if(loading)return <div style={{minHeight:'100vh',background:'#080808',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{fontFamily:"'DM Mono',monospace",color:'rgba(255,255,255,0.3)',animation:'pulse 1.5s infinite'}}>loading...</div></div>;
+
+  if(screen==='landing')return <Landing onGetStarted={()=>setScreen('auth')}/>;
+  if(screen==='auth')return <AuthScreen onBack={()=>setScreen('landing')}/>;
+  if(showSettings)return <Settings user={user} dark={dark} toggleTheme={toggleTheme} accent={accent} applyAccent={applyAccent} journeyDays={journeyDays} setJourneyDays={setJourneyDays} onClose={()=>setShowSettings(false)}/>;
+
+  return <div style={{minHeight:'100vh',background:bg,color:txt,maxWidth:480,margin:'0 auto',paddingBottom:50,transition:'background 0.3s,color 0.3s'}}>
+
+    {/* Header */}
+    <div style={{padding:'52px 22px 14px',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+      <div>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>{today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
+        <div style={{fontWeight:800,fontSize:26,letterSpacing:'-0.03em',lineHeight:1.1}}>{greet}</div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8}}>
+        <div style={{background:cardBg,border:'1px solid '+bdr,borderRadius:12,padding:'8px 14px',textAlign:'center'}}>
+          <div style={{fontWeight:800,fontSize:19,lineHeight:1,color:accent}}>Day {elapsed}</div>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:muted,marginTop:2}}>/ {journeyDays}</div>
+        </div>
+        <button onClick={()=>setShowSettings(true)} style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,background:'none',border:'none',letterSpacing:'0.05em'}}>⚙ settings</button>
+      </div>
+    </div>
+
+    {/* Quote */}
+    <div style={{margin:'0 22px 14px',padding:'13px 16px',background:'linear-gradient(135deg,'+accent+'12,'+accent+'04)',border:'1px solid '+accent+'20',borderRadius:14}}>
+      <div style={{fontSize:13,fontStyle:'italic',lineHeight:1.5,marginBottom:5,color:txt,opacity:0.8}}>"{quote.text}"</div>
+      <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:accent}}>— {quote.author}</div>
+    </div>
+
+    {/* Progress bar */}
+    <div style={{margin:'0 22px 18px',padding:'13px 16px',background:cardBg,border:'1px solid '+bdr,borderRadius:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+        <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:muted}}>Today · {done}/{habits.length}</span>
+        <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:pct===1?accent:muted}}>{pct===1?'🔥 Perfect!':Math.round(pct*100)+'%'}</span>
+      </div>
+      <div style={{height:5,background:dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',borderRadius:3,overflow:'hidden'}}>
+        <div style={{height:'100%',borderRadius:3,background:pct===1?'linear-gradient(90deg,'+accent+',#22d3ee)':accent,width:(pct*100)+'%',transition:'width 0.5s ease'}}/>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <div style={{display:'flex',gap:3,margin:'0 22px 20px',background:dark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.05)',borderRadius:12,padding:4}}>
+      {[['today','Today'],['history','History'],['stats','Stats']].map(([v,l])=><button key={v} onClick={()=>setView(v)} style={{flex:1,padding:'9px 0',borderRadius:9,border:'none',background:view===v?dark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.07)':'transparent',color:view===v?txt:muted,fontWeight:600,fontSize:13,transition:'all 0.2s'}}>{l}</button>)}
+    </div>
+
+    {view==='today'&&<div style={{padding:'0 22px'}}>
+      {habits.map(h=><Card key={h.id} h={h} logs={logs} onToggle={toggle} dark={dark} accent={accent}/>)}
+      <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:13,borderRadius:14,background:'transparent',border:'1px dashed '+(dark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'),color:muted,fontWeight:600,fontSize:14,marginTop:2}}>+ Add habit</button>
+    </div>}
+
+    {view==='history'&&<div style={{padding:'0 22px'}}>
+      <WeekAccordion logs={logs} habits={habits} dark={dark}/>
+    </div>}
+
+    {view==='stats'&&<div style={{padding:'0 22px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:9,marginBottom:14}}>
+        {[{l:'Streak',v:habits.length?Math.max(...habits.map(h=>streak(logs,h.id)))+'d':'0d',c:'#fb923c'},{l:'Hit Rate',v:Math.round((habits.length?habits.reduce((s,h)=>s+rate(logs,h),0)/habits.length:0)*100)+'%',c:accent},{l:'Days In',v:elapsed,c:'#38bdf8'}].map(s=><div key={s.l} style={{background:cardBg,border:'1px solid '+bdr,borderRadius:13,padding:'13px 10px',textAlign:'center'}}><div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:500,color:s.c,marginBottom:3}}>{s.v}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:muted,textTransform:'uppercase'}}>{s.l}</div></div>)}
+      </div>
+      <div style={{background:cardBg,border:'1px solid '+bdr,borderRadius:15,padding:'15px 16px',marginBottom:12}}>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:14}}>Habit Breakdown</div>
+        {habits.map(h=>{const r2=rate(logs,h.id),t2=total(logs,h.id),s2=streak(logs,h.id);return <div key={h.id} style={{marginBottom:14}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{fontWeight:600,fontSize:13}}>{h.emoji} {h.name}</span><div style={{display:'flex',gap:10}}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:h.color}}>{Math.round(r2*100)}%</span>{s2>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:'#fb923c'}}>🔥{s2}</span>}</div></div><div style={{height:5,background:dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',width:(r2*100)+'%',background:h.color,borderRadius:3,transition:'width 0.6s ease'}}/></div></div>;})}
+      </div>
+      <div style={{background:cardBg,border:'1px solid '+bdr,borderRadius:15,padding:'15px 16px'}}>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Manage</div>
+        {habits.map(h=><div key={h.id} style={{display:'flex',alignItems:'center',gap:12,padding:'9px 0',borderBottom:'1px solid '+(dark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.05)')}}><span style={{fontSize:17}}>{h.emoji}</span><span style={{flex:1,fontSize:13,fontWeight:600}}>{h.name}</span><button onClick={()=>delH(h.id)} style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,color:'#f87171',fontSize:11,padding:'4px 10px'}}>remove</button></div>)}
+      </div>
+    </div>}
+
+    {showAdd&&<div onClick={()=>setShowAdd(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:100}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:dark?'#141414':'#fff',borderRadius:'22px 22px 0 0',padding:'24px 22px 44px',width:'100%',maxWidth:480,border:'1px solid '+bdr,borderBottom:'none'}}>
+        <div style={{width:36,height:3,background:dark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)',borderRadius:2,margin:'0 auto 20px'}}/>
+        <div style={{fontWeight:800,fontSize:20,marginBottom:16}}>New Habit</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:14}}>{EMOJIS.map(e=><button key={e} onClick={()=>setEm(e)} style={{width:40,height:40,borderRadius:9,fontSize:19,border:'2px solid '+(em===e?accent:'rgba(128,128,128,0.15)'),background:em===e?accent+'20':'transparent'}}>{e}</button>)}</div>
+        <div style={{display:'flex',gap:8,marginBottom:14}}>{HCOLORS.map(c=><button key={c} onClick={()=>setCl(c)} style={{width:28,height:28,borderRadius:'50%',background:c,border:'3px solid '+(cl===c?txt:'transparent')}}/>)}</div>
+        <input value={nm} onChange={e=>setNm(e.target.value)} placeholder="Habit name..." autoFocus style={{width:'100%',background:dark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)',border:'1px solid '+bdr,borderRadius:11,padding:'13px 15px',color:txt,fontSize:15,marginBottom:10}}/>
+        <button onClick={addH} style={{width:'100%',padding:13,borderRadius:11,border:'none',background:nm.trim()?cl:'rgba(128,128,128,0.15)',color:nm.trim()?'#000':muted,fontWeight:700,fontSize:14}}>Add Habit</button>
+      </div>
+    </div>}
+
+    {toast&&<div style={{position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',background:dark?'rgba(20,20,20,0.95)':'rgba(255,255,255,0.95)',backdropFilter:'blur(20px)',border:'1px solid '+bdr,borderRadius:24,padding:'10px 20px',fontWeight:600,fontSize:14,color:txt,whiteSpace:'nowrap',zIndex:2000,animation:'fadeUpToast 0.3s ease',pointerEvents:'none'}}>{toast}</div>}
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>
